@@ -1,0 +1,959 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Port Terminal IoT Dashboard - Real-Time</title>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700;900&family=IBM+Plex+Mono:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-primary: #0a0e1a;
+            --bg-secondary: #141824;
+            --bg-tertiary: #1a1f2e;
+            --accent-primary: #00d4ff;
+            --accent-secondary: #0099ff;
+            --accent-success: #00ff88;
+            --accent-warning: #ffaa00;
+            --accent-danger: #ff3366;
+            --text-primary: #e8eef5;
+            --text-secondary: #8b95a8;
+            --border-color: #2a3142;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'IBM Plex Mono', monospace;
+            background: linear-gradient(135deg, #0a0e1a 0%, #1a1f2e 100%);
+            color: var(--text-primary);
+            overflow-x: hidden;
+        }
+        
+        .dashboard-container {
+            min-height: 100vh;
+            background: 
+                radial-gradient(circle at 10% 20%, rgba(0, 212, 255, 0.03) 0%, transparent 50%),
+                radial-gradient(circle at 90% 80%, rgba(0, 255, 136, 0.02) 0%, transparent 50%);
+        }
+        
+        .header {
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            background: rgba(10, 14, 26, 0.95);
+            backdrop-filter: blur(20px);
+            border-bottom: 2px solid var(--accent-primary);
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 8px 32px rgba(0, 212, 255, 0.1);
+        }
+        
+        .logo {
+            font-family: 'Orbitron', monospace;
+            font-size: 1.5rem;
+            font-weight: 900;
+            letter-spacing: 2px;
+            background: linear-gradient(135deg, var(--accent-primary), var(--accent-success));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-transform: uppercase;
+            animation: glow 3s ease-in-out infinite;
+        }
+        
+        @keyframes glow {
+            0%, 100% { filter: drop-shadow(0 0 8px rgba(0, 212, 255, 0.4)); }
+            50% { filter: drop-shadow(0 0 16px rgba(0, 212, 255, 0.8)); }
+        }
+        
+        .live-indicator {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            background: rgba(0, 255, 136, 0.1);
+            border: 1px solid var(--accent-success);
+            border-radius: 20px;
+            font-size: 0.875rem;
+        }
+        
+        .live-dot {
+            width: 10px;
+            height: 10px;
+            background: var(--accent-success);
+            border-radius: 50%;
+            animation: pulse 2s ease-in-out infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; box-shadow: 0 0 10px var(--accent-success); }
+            50% { opacity: 0.4; box-shadow: 0 0 20px var(--accent-success); }
+        }
+        
+        .kpi-section {
+            padding: 1.5rem 2rem;
+            background: linear-gradient(135deg, rgba(20, 24, 36, 0.98), rgba(26, 31, 46, 0.98));
+            border-bottom: 1px solid var(--border-color);
+        }
+        
+        .kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+        }
+        
+        .kpi-card {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 1rem;
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+        
+        .kpi-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 24px rgba(0, 212, 255, 0.15);
+            border-color: var(--accent-primary);
+        }
+        
+        .kpi-label {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--text-secondary);
+            margin-bottom: 0.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .kpi-value {
+            font-family: 'Orbitron', monospace;
+            font-size: 1.75rem;
+            font-weight: 700;
+            margin-bottom: 0.25rem;
+            background: linear-gradient(135deg, var(--text-primary), var(--accent-primary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        .kpi-trend {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+        }
+        
+        .trend-up {
+            color: var(--accent-success);
+        }
+        
+        .trend-down {
+            color: var(--accent-danger);
+        }
+        
+        .iot-badge {
+            display: inline-block;
+            padding: 2px 6px;
+            background: rgba(0, 212, 255, 0.2);
+            border: 1px solid var(--accent-primary);
+            border-radius: 4px;
+            font-size: 0.65rem;
+            font-weight: 600;
+            color: var(--accent-primary);
+        }
+        
+        .main-grid {
+            padding: 2rem;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 1.5rem;
+        }
+        
+        .widget {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 1.5rem;
+            transition: all 0.3s ease;
+        }
+        
+        .widget:hover {
+            border-color: var(--accent-primary);
+            box-shadow: 0 8px 32px rgba(0, 212, 255, 0.1);
+        }
+        
+        .widget-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+            padding-bottom: 0.75rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+        
+        .widget-title {
+            font-family: 'Orbitron', monospace;
+            font-size: 1rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--accent-primary);
+        }
+        
+        .widget-status {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+        }
+        
+        .equipment-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+        
+        .equipment-item {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 0.75rem;
+            display: grid;
+            grid-template-columns: 60px 1fr auto;
+            gap: 1rem;
+            align-items: center;
+            transition: all 0.3s ease;
+        }
+        
+        .equipment-item:hover {
+            border-color: var(--accent-primary);
+            transform: translateX(4px);
+        }
+        
+        .equipment-id {
+            font-family: 'Orbitron', monospace;
+            font-weight: 700;
+            font-size: 0.875rem;
+            color: var(--accent-primary);
+        }
+        
+        .equipment-metrics {
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+        }
+        
+        .metric-row {
+            display: flex;
+            gap: 1rem;
+            font-size: 0.75rem;
+        }
+        
+        .metric-label {
+            color: var(--text-secondary);
+        }
+        
+        .metric-value {
+            color: var(--text-primary);
+            font-weight: 600;
+        }
+        
+        .status-badge {
+            padding: 0.25rem 0.75rem;
+            border-radius: 12px;
+            font-size: 0.7rem;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+        
+        .status-active {
+            background: rgba(0, 255, 136, 0.2);
+            color: var(--accent-success);
+            border: 1px solid var(--accent-success);
+        }
+        
+        .status-idle {
+            background: rgba(255, 170, 0, 0.2);
+            color: var(--accent-warning);
+            border: 1px solid var(--accent-warning);
+        }
+        
+        .status-maintenance {
+            background: rgba(255, 51, 102, 0.2);
+            color: var(--accent-danger);
+            border: 1px solid var(--accent-danger);
+        }
+        
+        .container-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+            gap: 0.5rem;
+            margin-top: 1rem;
+        }
+        
+        .container-cell {
+            aspect-ratio: 1;
+            border-radius: 4px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.7rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: 2px solid transparent;
+        }
+        
+        .container-cell:hover {
+            transform: scale(1.1);
+            z-index: 10;
+            border-color: var(--text-primary);
+        }
+        
+        .container-import {
+            background: linear-gradient(135deg, #00ff88, #00d4ff);
+            color: var(--bg-primary);
+        }
+        
+        .container-export {
+            background: linear-gradient(135deg, #ffaa00, #ff8800);
+            color: var(--bg-primary);
+        }
+        
+        .container-reefer {
+            background: linear-gradient(135deg, #0099ff, #6666ff);
+            color: #fff;
+        }
+        
+        .container-empty {
+            background: var(--bg-tertiary);
+            border: 1px dashed var(--border-color);
+            color: var(--text-secondary);
+        }
+        
+        .sensor-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+        
+        .sensor-card {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 1rem;
+        }
+        
+        .sensor-reading {
+            font-family: 'Orbitron', monospace;
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--accent-primary);
+            margin: 0.5rem 0;
+        }
+        
+        .sensor-label {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+        }
+        
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: var(--bg-tertiary);
+            border-radius: 4px;
+            overflow: hidden;
+            margin-top: 0.5rem;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--accent-success), var(--accent-primary));
+            transition: width 0.5s ease;
+        }
+        
+        .alert-panel {
+            background: rgba(255, 170, 0, 0.1);
+            border: 1px solid var(--accent-warning);
+            border-radius: 8px;
+            padding: 1rem;
+            margin-top: 1rem;
+        }
+        
+        .alert-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 0.75rem;
+            margin-bottom: 0.75rem;
+        }
+        
+        .alert-item:last-child {
+            margin-bottom: 0;
+        }
+        
+        .alert-icon {
+            font-size: 1.25rem;
+        }
+        
+        .alert-content {
+            flex: 1;
+        }
+        
+        .alert-title {
+            font-weight: 600;
+            color: var(--accent-warning);
+            margin-bottom: 0.25rem;
+        }
+        
+        .alert-description {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+        }
+        
+        .full-width {
+            grid-column: 1 / -1;
+        }
+        
+        @media (max-width: 1200px) {
+            .main-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+    
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+        
+        // IoT Data Simulator
+        class IoTSimulator {
+            constructor() {
+                this.baseValues = {
+                    cranes: [
+                        { id: 'QC1', baseProductivity: 30, status: 'active' },
+                        { id: 'QC2', baseProductivity: 28, status: 'active' },
+                        { id: 'QC3', baseProductivity: 32, status: 'active' },
+                        { id: 'QC4', baseProductivity: 25, status: 'idle' },
+                        { id: 'QC5', baseProductivity: 29, status: 'active' },
+                        { id: 'QC6', baseProductivity: 27, status: 'maintenance' }
+                    ],
+                    rtgs: [
+                        { id: 'RTG-01', baseSpeed: 45, zone: 'A' },
+                        { id: 'RTG-02', baseSpeed: 42, zone: 'B' },
+                        { id: 'RTG-03', baseSpeed: 48, zone: 'C' },
+                        { id: 'RTG-04', baseSpeed: 40, zone: 'D' }
+                    ]
+                };
+            }
+            
+            randomVariance(base, variance) {
+                return base + (Math.random() - 0.5) * variance;
+            }
+            
+            generateCraneData() {
+                return this.baseValues.cranes.map(crane => ({
+                    id: crane.id,
+                    status: crane.status,
+                    productivity: Math.round(this.randomVariance(crane.baseProductivity, 4)),
+                    temperature: Math.round(this.randomVariance(65, 10)),
+                    motorLoad: Math.round(this.randomVariance(75, 15)),
+                    energyConsumption: Math.round(this.randomVariance(120, 20)),
+                    position: {
+                        trolley: Math.round(this.randomVariance(50, 40)),
+                        hoist: Math.round(this.randomVariance(15, 10))
+                    }
+                }));
+            }
+            
+            generateRTGData() {
+                return this.baseValues.rtgs.map(rtg => ({
+                    id: rtg.id,
+                    zone: rtg.zone,
+                    speed: Math.round(this.randomVariance(rtg.baseSpeed, 8)),
+                    fuelLevel: Math.round(this.randomVariance(70, 20)),
+                    batteryLevel: Math.round(this.randomVariance(85, 10)),
+                    tirePressure: this.randomVariance(8.5, 0.3).toFixed(1),
+                    gpsLat: this.randomVariance(40.7128, 0.001).toFixed(6),
+                    gpsLon: this.randomVariance(-74.0060, 0.001).toFixed(6)
+                }));
+            }
+            
+            generateYardData() {
+                const blocks = ['A', 'B', 'C', 'D', 'E', 'F'];
+                return blocks.map(block => ({
+                    id: block,
+                    occupancy: Math.round(this.randomVariance(70, 25)),
+                    containers: Math.round(this.randomVariance(180, 40)),
+                    reeferCount: Math.round(this.randomVariance(12, 8)),
+                    reeferTemp: this.randomVariance(4, 2).toFixed(1)
+                }));
+            }
+            
+            generateEnvironmentalData() {
+                return {
+                    temperature: this.randomVariance(22, 5).toFixed(1),
+                    humidity: Math.round(this.randomVariance(65, 15)),
+                    windSpeed: this.randomVariance(12, 6).toFixed(1),
+                    windDirection: Math.round(this.randomVariance(180, 180)),
+                    airQuality: Math.round(this.randomVariance(45, 20)),
+                    visibility: this.randomVariance(8, 2).toFixed(1)
+                };
+            }
+            
+            generateEnergyData() {
+                return {
+                    totalConsumption: Math.round(this.randomVariance(2400, 200)),
+                    solarGeneration: Math.round(this.randomVariance(180, 40)),
+                    gridPower: Math.round(this.randomVariance(2200, 180)),
+                    shoreConnection: Math.round(this.randomVariance(320, 80)),
+                    peakDemand: Math.round(this.randomVariance(2800, 200))
+                };
+            }
+            
+            generateGateData() {
+                return {
+                    inGate: {
+                        queue: Math.round(this.randomVariance(8, 6)),
+                        avgWait: Math.round(this.randomVariance(4, 2)),
+                        throughput: Math.round(this.randomVariance(45, 10))
+                    },
+                    outGate: {
+                        queue: Math.round(this.randomVariance(6, 4)),
+                        avgWait: Math.round(this.randomVariance(3, 1.5)),
+                        throughput: Math.round(this.randomVariance(38, 8))
+                    }
+                };
+            }
+            
+            generateKPIs() {
+                return {
+                    vesselTAT: this.randomVariance(18.5, 1.5).toFixed(1),
+                    craneProductivity: this.randomVariance(28.5, 2).toFixed(1),
+                    yardDwell: this.randomVariance(3.2, 0.4).toFixed(1),
+                    truckTAT: Math.round(this.randomVariance(38, 4)),
+                    costPerTEU: Math.round(this.randomVariance(142, 8)),
+                    co2PerTEU: this.randomVariance(12.3, 0.8).toFixed(1),
+                    teusToday: Math.round(this.randomVariance(2847, 200)),
+                    berthUtilization: Math.round(this.randomVariance(78, 8))
+                };
+            }
+        }
+        
+        const Dashboard = () => {
+            const [iotData, setIotData] = useState({});
+            const [lastUpdate, setLastUpdate] = useState(new Date());
+            const simulator = new IoTSimulator();
+            
+            const updateIoTData = () => {
+                const newData = {
+                    cranes: simulator.generateCraneData(),
+                    rtgs: simulator.generateRTGData(),
+                    yard: simulator.generateYardData(),
+                    environmental: simulator.generateEnvironmentalData(),
+                    energy: simulator.generateEnergyData(),
+                    gates: simulator.generateGateData(),
+                    kpis: simulator.generateKPIs()
+                };
+                setIotData(newData);
+                setLastUpdate(new Date());
+            };
+            
+            useEffect(() => {
+                updateIoTData();
+                const interval = setInterval(updateIoTData, 2000); // Update every 2 seconds
+                return () => clearInterval(interval);
+            }, []);
+            
+            if (!iotData.kpis) return <div style={{ padding: '2rem', color: 'var(--text-primary)' }}>Loading IoT Data...</div>;
+            
+            return (
+                <div className="dashboard-container">
+                    {/* Header */}
+                    <div className="header">
+                        <div className="logo">⚓ PORT IoT CONTROL</div>
+                        <div className="live-indicator">
+                            <div className="live-dot"></div>
+                            <span>LIVE • Updated {lastUpdate.toLocaleTimeString()}</span>
+                        </div>
+                    </div>
+                    
+                    {/* KPI Section */}
+                    <div className="kpi-section">
+                        <div className="kpi-grid">
+                            <div className="kpi-card">
+                                <div className="kpi-label">
+                                    <span className="iot-badge">IoT</span>
+                                    Vessel TAT
+                                </div>
+                                <div className="kpi-value">{iotData.kpis.vesselTAT}h</div>
+                                <div className="kpi-trend trend-up">↓ 2.1h vs yesterday</div>
+                            </div>
+                            
+                            <div className="kpi-card">
+                                <div className="kpi-label">
+                                    <span className="iot-badge">IoT</span>
+                                    Crane Productivity
+                                </div>
+                                <div className="kpi-value">{iotData.kpis.craneProductivity}</div>
+                                <div className="kpi-trend">moves/hour</div>
+                            </div>
+                            
+                            <div className="kpi-card">
+                                <div className="kpi-label">
+                                    <span className="iot-badge">IoT</span>
+                                    Truck TAT
+                                </div>
+                                <div className="kpi-value">{iotData.kpis.truckTAT}m</div>
+                                <div className="kpi-trend trend-up">↓ 4m vs target</div>
+                            </div>
+                            
+                            <div className="kpi-card">
+                                <div className="kpi-label">
+                                    <span className="iot-badge">IoT</span>
+                                    TEUs Today
+                                </div>
+                                <div className="kpi-value">{iotData.kpis.teusToday}</div>
+                                <div className="kpi-trend">containers processed</div>
+                            </div>
+                            
+                            <div className="kpi-card">
+                                <div className="kpi-label">
+                                    <span className="iot-badge">IoT</span>
+                                    Energy Usage
+                                </div>
+                                <div className="kpi-value">{iotData.energy.totalConsumption}</div>
+                                <div className="kpi-trend">kWh current</div>
+                            </div>
+                            
+                            <div className="kpi-card">
+                                <div className="kpi-label">
+                                    <span className="iot-badge">IoT</span>
+                                    CO₂ per TEU
+                                </div>
+                                <div className="kpi-value">{iotData.kpis.co2PerTEU}kg</div>
+                                <div className="kpi-trend trend-up">↓ 1.2kg vs target</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    {/* Main Grid */}
+                    <div className="main-grid">
+                        {/* Quay Cranes IoT */}
+                        <div className="widget">
+                            <div className="widget-header">
+                                <h3 className="widget-title">🏗️ Quay Cranes - Live Telemetry</h3>
+                                <span className="widget-status">Real-time sensor data</span>
+                            </div>
+                            <div className="equipment-list">
+                                {iotData.cranes.map(crane => (
+                                    <div className="equipment-item" key={crane.id}>
+                                        <div className="equipment-id">{crane.id}</div>
+                                        <div className="equipment-metrics">
+                                            <div className="metric-row">
+                                                <span className="metric-label">Moves/h:</span>
+                                                <span className="metric-value">{crane.productivity}</span>
+                                                <span className="metric-label">Temp:</span>
+                                                <span className="metric-value">{crane.temperature}°C</span>
+                                            </div>
+                                            <div className="metric-row">
+                                                <span className="metric-label">Motor Load:</span>
+                                                <span className="metric-value">{crane.motorLoad}%</span>
+                                                <span className="metric-label">Energy:</span>
+                                                <span className="metric-value">{crane.energyConsumption}kW</span>
+                                            </div>
+                                            <div className="progress-bar">
+                                                <div className="progress-fill" style={{ width: `${crane.motorLoad}%` }}></div>
+                                            </div>
+                                        </div>
+                                        <div className={`status-badge status-${crane.status}`}>
+                                            {crane.status}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                        
+                        {/* RTG Fleet IoT */}
+                        <div className="widget">
+                            <div className="widget-header">
+                                <h3 className="widget-title">🚜 RTG Fleet - GPS & Telemetry</h3>
+                                <span className="widget-status">Live tracking</span>
+                            </div>
+                            <div className="equipment-list">
+                                {iotData.rtgs.map(rtg => (
+                                    <div className="equipment-item" key={rtg.id}>
+                                        <div className="equipment-id">{rtg.id}</div>
+                                        <div className="equipment-metrics">
+                                            <div className="metric-row">
+                                                <span className="metric-label">Zone:</span>
+                                                <span className="metric-value">{rtg.zone}</span>
+                                                <span className="metric-label">Speed:</span>
+                                                <span className="metric-value">{rtg.speed} m/min</span>
+                                            </div>
+                                            <div className="metric-row">
+                                                <span className="metric-label">Fuel:</span>
+                                                <span className="metric-value">{rtg.fuelLevel}%</span>
+                                                <span className="metric-label">Battery:</span>
+                                                <span className="metric-value">{rtg.batteryLevel}%</span>
+                                            </div>
+                                            <div className="metric-row">
+                                                <span className="metric-label">GPS:</span>
+                                                <span className="metric-value" style={{ fontSize: '0.65rem' }}>
+                                                    {rtg.gpsLat}, {rtg.gpsLon}
+                                                </span>
+                                            </div>
+                                        </div>
+                                        <div className="status-badge status-active">
+                                            ACTIVE
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                        
+                        {/* Yard Occupancy IoT */}
+                        <div className="widget">
+                            <div className="widget-header">
+                                <h3 className="widget-title">📦 Yard Blocks - RFID & Sensors</h3>
+                                <span className="widget-status">Real-time occupancy</span>
+                            </div>
+                            <div className="container-grid">
+                                {iotData.yard.map(block => (
+                                    <div 
+                                        key={block.id}
+                                        className={`container-cell ${
+                                            block.occupancy > 85 ? 'container-reefer' :
+                                            block.occupancy > 65 ? 'container-export' :
+                                            block.occupancy > 40 ? 'container-import' :
+                                            'container-empty'
+                                        }`}
+                                        title={`Block ${block.id}: ${block.occupancy}% occupied, ${block.containers} containers`}
+                                    >
+                                        <div style={{ fontSize: '1rem', fontWeight: 700 }}>{block.id}</div>
+                                        <div style={{ fontSize: '0.85rem' }}>{block.occupancy}%</div>
+                                    </div>
+                                ))}
+                            </div>
+                            <div style={{ marginTop: '1rem', fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+                                <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
+                                    <span>🟢 Low (&lt;40%)</span>
+                                    <span>🟡 Medium (40-65%)</span>
+                                    <span>🟠 High (65-85%)</span>
+                                    <span>🔴 Critical (&gt;85%)</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        {/* Environmental Sensors */}
+                        <div className="widget">
+                            <div className="widget-header">
+                                <h3 className="widget-title">🌤️ Environmental Sensors</h3>
+                                <span className="widget-status">Weather station</span>
+                            </div>
+                            <div className="sensor-grid">
+                                <div className="sensor-card">
+                                    <div className="sensor-label">Temperature</div>
+                                    <div className="sensor-reading">{iotData.environmental.temperature}°C</div>
+                                </div>
+                                <div className="sensor-card">
+                                    <div className="sensor-label">Humidity</div>
+                                    <div className="sensor-reading">{iotData.environmental.humidity}%</div>
+                                </div>
+                                <div className="sensor-card">
+                                    <div className="sensor-label">Wind Speed</div>
+                                    <div className="sensor-reading">{iotData.environmental.windSpeed} km/h</div>
+                                </div>
+                                <div className="sensor-card">
+                                    <div className="sensor-label">Wind Direction</div>
+                                    <div className="sensor-reading">{iotData.environmental.windDirection}°</div>
+                                </div>
+                                <div className="sensor-card">
+                                    <div className="sensor-label">Air Quality (AQI)</div>
+                                    <div className="sensor-reading">{iotData.environmental.airQuality}</div>
+                                </div>
+                                <div className="sensor-card">
+                                    <div className="sensor-label">Visibility</div>
+                                    <div className="sensor-reading">{iotData.environmental.visibility} km</div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        {/* Energy Management */}
+                        <div className="widget">
+                            <div className="widget-header">
+                                <h3 className="widget-title">⚡ Energy Management - Smart Meters</h3>
+                                <span className="widget-status">Real-time consumption</span>
+                            </div>
+                            <div className="sensor-grid">
+                                <div className="sensor-card">
+                                    <div className="sensor-label">Total Consumption</div>
+                                    <div className="sensor-reading">{iotData.energy.totalConsumption} kW</div>
+                                </div>
+                                <div className="sensor-card">
+                                    <div className="sensor-label">Solar Generation</div>
+                                    <div className="sensor-reading" style={{ color: 'var(--accent-success)' }}>
+                                        {iotData.energy.solarGeneration} kW
+                                    </div>
+                                </div>
+                                <div className="sensor-card">
+                                    <div className="sensor-label">Grid Power</div>
+                                    <div className="sensor-reading">{iotData.energy.gridPower} kW</div>
+                                </div>
+                                <div className="sensor-card">
+                                    <div className="sensor-label">Shore Connection</div>
+                                    <div className="sensor-reading">{iotData.energy.shoreConnection} kW</div>
+                                </div>
+                            </div>
+                            <div style={{ marginTop: '1rem' }}>
+                                <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: '0.5rem' }}>
+                                    Solar Contribution: {Math.round((iotData.energy.solarGeneration / iotData.energy.totalConsumption) * 100)}%
+                                </div>
+                                <div className="progress-bar" style={{ height: '12px' }}>
+                                    <div className="progress-fill" style={{ 
+                                        width: `${(iotData.energy.solarGeneration / iotData.energy.totalConsumption) * 100}%`,
+                                        background: 'linear-gradient(90deg, var(--accent-success), #ffaa00)'
+                                    }}></div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        {/* Gate Operations */}
+                        <div className="widget">
+                            <div className="widget-header">
+                                <h3 className="widget-title">🚪 Gate Operations - OCR & RFID</h3>
+                                <span className="widget-status">Live queue monitoring</span>
+                            </div>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                                <div style={{ background: 'var(--bg-tertiary)', padding: '1rem', borderRadius: '8px' }}>
+                                    <div style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', marginBottom: '0.5rem' }}>
+                                        IN-GATE
+                                    </div>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                        <div>
+                                            <div style={{ fontSize: '2rem', fontWeight: 700, color: 'var(--accent-primary)' }}>
+                                                {iotData.gates.inGate.queue}
+                                            </div>
+                                            <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+                                                trucks in queue
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <div style={{ fontSize: '1.25rem', fontWeight: 700 }}>
+                                                {iotData.gates.inGate.avgWait} min
+                                            </div>
+                                            <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+                                                avg wait
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <div style={{ fontSize: '1.25rem', fontWeight: 700 }}>
+                                                {iotData.gates.inGate.throughput}/h
+                                            </div>
+                                            <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+                                                throughput
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div style={{ background: 'var(--bg-tertiary)', padding: '1rem', borderRadius: '8px' }}>
+                                    <div style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', marginBottom: '0.5rem' }}>
+                                        OUT-GATE
+                                    </div>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                        <div>
+                                            <div style={{ fontSize: '2rem', fontWeight: 700, color: 'var(--accent-success)' }}>
+                                                {iotData.gates.outGate.queue}
+                                            </div>
+                                            <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+                                                trucks in queue
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <div style={{ fontSize: '1.25rem', fontWeight: 700 }}>
+                                                {iotData.gates.outGate.avgWait} min
+                                            </div>
+                                            <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+                                                avg wait
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <div style={{ fontSize: '1.25rem', fontWeight: 700 }}>
+                                                {iotData.gates.outGate.throughput}/h
+                                            </div>
+                                            <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+                                                throughput
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        {/* IoT Alerts */}
+                        <div className="widget full-width">
+                            <div className="widget-header">
+                                <h3 className="widget-title">🚨 IoT Alerts & Notifications</h3>
+                                <span className="widget-status">Automated monitoring</span>
+                            </div>
+                            <div className="alert-panel">
+                                <div className="alert-item">
+                                    <div className="alert-icon">⚠️</div>
+                                    <div className="alert-content">
+                                        <div className="alert-title">Crane QC6 - Maintenance Mode</div>
+                                        <div className="alert-description">
+                                            Vibration sensor detected abnormal pattern. Preventive maintenance initiated. ETA: 2 hours
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="alert-item">
+                                    <div className="alert-icon">📊</div>
+                                    <div className="alert-content">
+                                        <div className="alert-title">Yard Block C - High Occupancy</div>
+                                        <div className="alert-description">
+                                            RFID sensors show 94% occupancy. Consider redirecting import containers to Block E (58% occupancy)
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="alert-item">
+                                    <div className="alert-icon">🌡️</div>
+                                    <div className="alert-content">
+                                        <div className="alert-title">Reefer Temperature Alert</div>
+                                        <div className="alert-description">
+                                            Container TCLU1234567 temperature deviation detected: 6.2°C (target: 4°C). Reefer unit status check recommended
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="alert-item">
+                                    <div className="alert-icon">⚡</div>
+                                    <div className="alert-content">
+                                        <div className="alert-title">Energy Optimization Opportunity</div>
+                                        <div className="alert-description">
+                                            Solar generation at peak. Shore power cost reduced by 15%. Current rate: $0.08/kWh
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+        
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<Dashboard />);
+    </script>
+</body>
+</html>
