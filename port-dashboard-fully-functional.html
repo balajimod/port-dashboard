@@ -1,0 +1,1287 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Port Terminal Operations Dashboard</title>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700;900&family=IBM+Plex+Mono:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-primary: #0a0e1a;
+            --bg-secondary: #141824;
+            --bg-tertiary: #1a1f2e;
+            --accent-primary: #00d4ff;
+            --accent-secondary: #0099ff;
+            --accent-success: #00ff88;
+            --accent-warning: #ffaa00;
+            --accent-danger: #ff3366;
+            --text-primary: #e8eef5;
+            --text-secondary: #8b95a8;
+            --border-color: #2a3142;
+            --green: #00ff88;
+            --amber: #ffaa00;
+            --red: #ff3366;
+            --blue: #0099ff;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'IBM Plex Mono', monospace;
+            background: linear-gradient(135deg, #0a0e1a 0%, #1a1f2e 100%);
+            color: var(--text-primary);
+            overflow-x: hidden;
+        }
+        
+        .dashboard-container {
+            min-height: 100vh;
+            background: 
+                radial-gradient(circle at 10% 20%, rgba(0, 212, 255, 0.03) 0%, transparent 50%),
+                radial-gradient(circle at 90% 80%, rgba(0, 255, 136, 0.02) 0%, transparent 50%);
+        }
+        
+        .global-controls {
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            background: rgba(10, 14, 26, 0.95);
+            backdrop-filter: blur(20px);
+            border-bottom: 2px solid var(--accent-primary);
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 1rem;
+            box-shadow: 0 8px 32px rgba(0, 212, 255, 0.1);
+        }
+        
+        .logo {
+            font-family: 'Orbitron', monospace;
+            font-size: 1.5rem;
+            font-weight: 900;
+            letter-spacing: 2px;
+            background: linear-gradient(135deg, var(--accent-primary), var(--accent-success));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-transform: uppercase;
+            animation: glow 3s ease-in-out infinite;
+        }
+        
+        @keyframes glow {
+            0%, 100% { filter: drop-shadow(0 0 8px rgba(0, 212, 255, 0.4)); }
+            50% { filter: drop-shadow(0 0 16px rgba(0, 212, 255, 0.8)); }
+        }
+        
+        .controls-group {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+        
+        .control-select {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
+            padding: 0.5rem 1rem;
+            border-radius: 4px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.875rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .control-select:hover, .control-select:focus {
+            border-color: var(--accent-primary);
+            box-shadow: 0 0 12px rgba(0, 212, 255, 0.2);
+            outline: none;
+        }
+
+        .control-select option {
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+        }
+        
+        .executive-overview {
+            position: sticky;
+            top: 80px;
+            z-index: 90;
+            background: linear-gradient(135deg, rgba(20, 24, 36, 0.98), rgba(26, 31, 46, 0.98));
+            backdrop-filter: blur(20px);
+            padding: 1rem 2rem;
+            border-bottom: 1px solid var(--border-color);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
+        
+        .kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+            gap: 0.75rem;
+        }
+        
+        .kpi-tile {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 0.875rem;
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+        
+        .kpi-tile::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, var(--accent-primary), var(--accent-success));
+            transform: scaleX(0);
+            transition: transform 0.3s ease;
+        }
+        
+        .kpi-tile:hover::before {
+            transform: scaleX(1);
+        }
+        
+        .kpi-tile:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 24px rgba(0, 212, 255, 0.15);
+        }
+        
+        .kpi-label {
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--text-secondary);
+            margin-bottom: 0.4rem;
+        }
+        
+        .kpi-value {
+            font-family: 'Orbitron', monospace;
+            font-size: 1.75rem;
+            font-weight: 700;
+            margin-bottom: 0.4rem;
+            background: linear-gradient(135deg, var(--text-primary), var(--accent-primary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        .kpi-trend {
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+            font-size: 0.8rem;
+        }
+        
+        .status-indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            animation: pulse 2s ease-in-out infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        
+        .status-green { background: var(--green); box-shadow: 0 0 12px var(--green); }
+        .status-amber { background: var(--amber); box-shadow: 0 0 12px var(--amber); }
+        .status-red { background: var(--red); box-shadow: 0 0 12px var(--red); }
+        
+        .dashboard-grid {
+            padding: 2rem;
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 2rem;
+        }
+        
+        .dashboard-section {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 1.5rem;
+            transition: all 0.3s ease;
+        }
+        
+        .dashboard-section:hover {
+            border-color: var(--accent-primary);
+            box-shadow: 0 8px 32px rgba(0, 212, 255, 0.1);
+        }
+        
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+        
+        .section-title {
+            font-family: 'Orbitron', monospace;
+            font-size: 1.125rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            color: var(--accent-primary);
+        }
+        
+        .section-kpis {
+            display: flex;
+            gap: 1.5rem;
+            font-size: 0.875rem;
+        }
+        
+        .section-kpi {
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .section-kpi-label {
+            color: var(--text-secondary);
+            font-size: 0.75rem;
+            margin-bottom: 0.25rem;
+        }
+        
+        .section-kpi-value {
+            color: var(--text-primary);
+            font-weight: 600;
+        }
+        
+        .berth-gantt {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+            margin-bottom: 1.5rem;
+        }
+        
+        .berth-row {
+            display: grid;
+            grid-template-columns: 80px 1fr;
+            gap: 1rem;
+            align-items: center;
+        }
+        
+        .berth-label {
+            font-weight: 600;
+            color: var(--text-secondary);
+        }
+        
+        .berth-timeline {
+            position: relative;
+            height: 40px;
+            background: var(--bg-tertiary);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        
+        .vessel-block {
+            position: absolute;
+            height: 100%;
+            background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            padding: 0 0.75rem;
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: var(--bg-primary);
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        
+        .vessel-block:hover {
+            transform: scaleY(1.1);
+            box-shadow: 0 4px 16px rgba(0, 212, 255, 0.4);
+            z-index: 10;
+        }
+        
+        .crane-bar-chart {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+        
+        .crane-bar {
+            display: grid;
+            grid-template-columns: 50px 1fr 50px;
+            gap: 1rem;
+            align-items: center;
+        }
+        
+        .crane-bar-label {
+            font-weight: 600;
+            color: var(--text-secondary);
+        }
+        
+        .crane-bar-track {
+            height: 24px;
+            background: var(--bg-tertiary);
+            border-radius: 4px;
+            overflow: hidden;
+            position: relative;
+        }
+        
+        .crane-bar-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--accent-success), var(--accent-primary));
+            border-radius: 4px;
+            transition: width 0.6s ease;
+            position: relative;
+        }
+        
+        .crane-bar-fill::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+            animation: shimmer 2s infinite;
+        }
+        
+        @keyframes shimmer {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(100%); }
+        }
+        
+        .crane-bar-value {
+            font-weight: 700;
+            color: var(--accent-primary);
+            text-align: right;
+        }
+        
+        .heatmap-grid {
+            display: grid;
+            grid-template-columns: repeat(6, 1fr);
+            gap: 0.75rem;
+            margin-bottom: 1.5rem;
+        }
+        
+        .heatmap-cell {
+            aspect-ratio: 1;
+            border-radius: 8px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.75rem;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            border: 2px solid transparent;
+        }
+        
+        .heatmap-cell:hover {
+            transform: scale(1.1);
+            border-color: var(--text-primary);
+            z-index: 10;
+        }
+        
+        .heatmap-low { background: linear-gradient(135deg, #00ff88, #00d4ff); color: var(--bg-primary); }
+        .heatmap-medium { background: linear-gradient(135deg, #ffaa00, #ff8800); color: var(--bg-primary); }
+        .heatmap-high { background: linear-gradient(135deg, #ff3366, #cc0044); color: #fff; }
+        
+        .gauge-container {
+            position: relative;
+            width: 200px;
+            height: 200px;
+            margin: 1.5rem auto;
+        }
+        
+        .gauge-svg {
+            transform: rotate(-90deg);
+        }
+        
+        .gauge-value {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+        }
+        
+        .gauge-number {
+            font-family: 'Orbitron', monospace;
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: var(--accent-primary);
+        }
+        
+        .gauge-label {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+        }
+        
+        .ai-insights {
+            grid-column: 1 / -1;
+            background: linear-gradient(135deg, rgba(0, 212, 255, 0.05), rgba(0, 255, 136, 0.05));
+            border: 2px solid var(--accent-primary);
+            border-radius: 12px;
+            padding: 2rem;
+        }
+        
+        .ai-header {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+        
+        .ai-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--accent-primary), var(--accent-success));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            animation: rotate 10s linear infinite;
+        }
+        
+        @keyframes rotate {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        
+        .ai-title {
+            font-family: 'Orbitron', monospace;
+            font-size: 1.5rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--accent-primary), var(--accent-success));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        .prediction-card, .recommendation-card {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 1.25rem;
+            margin-bottom: 1rem;
+            border-left: 4px solid var(--accent-warning);
+            transition: all 0.3s ease;
+        }
+        
+        .recommendation-card {
+            border-left-color: var(--accent-primary);
+        }
+        
+        .prediction-card:hover, .recommendation-card:hover {
+            transform: translateX(8px);
+            box-shadow: 0 8px 24px rgba(0, 212, 255, 0.2);
+        }
+        
+        .recommendation-actions {
+            display: flex;
+            gap: 0.75rem;
+            margin-top: 1rem;
+        }
+        
+        .btn {
+            padding: 0.5rem 1rem;
+            border-radius: 4px;
+            border: none;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.875rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-approve {
+            background: var(--accent-success);
+            color: var(--bg-primary);
+        }
+        
+        .btn-approve:hover {
+            background: var(--green);
+            box-shadow: 0 4px 16px rgba(0, 255, 136, 0.4);
+            transform: translateY(-2px);
+        }
+        
+        .btn-dismiss {
+            background: var(--bg-tertiary);
+            color: var(--text-secondary);
+            border: 1px solid var(--border-color);
+        }
+        
+        .btn-dismiss:hover {
+            border-color: var(--accent-danger);
+            color: var(--accent-danger);
+        }
+        
+        .btn-simulate {
+            background: var(--accent-primary);
+            color: var(--bg-primary);
+        }
+        
+        .btn-simulate:hover {
+            background: var(--blue);
+            box-shadow: 0 4px 16px rgba(0, 212, 255, 0.4);
+            transform: translateY(-2px);
+        }
+        
+        .metric-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+        
+        .metric-item {
+            background: var(--bg-tertiary);
+            padding: 1rem;
+            border-radius: 6px;
+            border: 1px solid var(--border-color);
+        }
+        
+        .role-selector {
+            display: flex;
+            gap: 0.5rem;
+            margin-left: auto;
+        }
+        
+        .role-btn {
+            padding: 0.5rem 1rem;
+            border-radius: 4px;
+            border: 1px solid var(--border-color);
+            background: var(--bg-tertiary);
+            color: var(--text-secondary);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.75rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .role-btn.active {
+            background: var(--accent-primary);
+            color: var(--bg-primary);
+            border-color: var(--accent-primary);
+            font-weight: 700;
+        }
+        
+        .role-btn:hover:not(.active) {
+            border-color: var(--accent-primary);
+            color: var(--accent-primary);
+        }
+
+        .role-notification {
+            background: linear-gradient(135deg, rgba(0, 212, 255, 0.1), rgba(0, 255, 136, 0.1));
+            border: 1px solid var(--accent-primary);
+            border-radius: 8px;
+            padding: 1rem 2rem;
+            margin: 2rem;
+            text-align: center;
+            animation: slideIn 0.5s ease;
+        }
+
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(-20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .role-notification h3 {
+            font-family: 'Orbitron', monospace;
+            color: var(--accent-primary);
+            margin-bottom: 0.5rem;
+        }
+
+        .filter-notification {
+            background: rgba(0, 212, 255, 0.1);
+            border: 1px solid var(--accent-primary);
+            border-radius: 8px;
+            padding: 0.75rem 1.5rem;
+            margin: 1rem 2rem 0 2rem;
+            text-align: center;
+            font-size: 0.875rem;
+            animation: slideIn 0.5s ease;
+        }
+
+        .full-width {
+            grid-column: 1 / -1;
+        }
+        
+        @media (max-width: 1200px) {
+            .dashboard-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .kpi-grid {
+                grid-template-columns: repeat(3, 1fr);
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .kpi-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            
+            .controls-group {
+                width: 100%;
+            }
+            
+            .role-selector {
+                width: 100%;
+                margin-left: 0;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+    
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+        
+        // Simulated data by terminal
+        const terminalData = {
+            'Terminal A': {
+                vessels: [
+                    { berth: 'Berth 1', name: 'Vessel A', start: '20%', width: '35%', type: 'Import' },
+                    { berth: 'Berth 2', name: 'Vessel B', start: '40%', width: '55%', type: 'Export' },
+                    { berth: 'Berth 3', name: 'Vessel C', start: '10%', width: '80%', type: 'Import' },
+                    { berth: 'Berth 4', name: 'Vessel D', start: '50%', width: '30%', type: 'Transship' }
+                ],
+                cranes: [
+                    { id: 'QC1', moves: 32, max: 40 },
+                    { id: 'QC2', moves: 28, max: 40 },
+                    { id: 'QC3', moves: 35, max: 40 },
+                    { id: 'QC4', moves: 18, max: 40, status: 'Down' },
+                    { id: 'QC5', moves: 30, max: 40 },
+                    { id: 'QC6', moves: 27, max: 40 }
+                ],
+                teus: 2847
+            },
+            'Terminal B': {
+                vessels: [
+                    { berth: 'Berth 1', name: 'Maersk Edmonton', start: '15%', width: '45%', type: 'Export' },
+                    { berth: 'Berth 2', name: 'COSCO Harmony', start: '35%', width: '50%', type: 'Import' },
+                    { berth: 'Berth 3', name: 'MSC Aurora', start: '25%', width: '60%', type: 'Transship' }
+                ],
+                cranes: [
+                    { id: 'QC1', moves: 29, max: 40 },
+                    { id: 'QC2', moves: 31, max: 40 },
+                    { id: 'QC3', moves: 26, max: 40 },
+                    { id: 'QC4', moves: 33, max: 40 }
+                ],
+                teus: 1923
+            },
+            'Terminal C': {
+                vessels: [
+                    { berth: 'Berth 1', name: 'Evergreen Jade', start: '30%', width: '40%', type: 'Import' },
+                    { berth: 'Berth 2', name: 'CMA CGM Titan', start: '10%', width: '70%', type: 'Export' }
+                ],
+                cranes: [
+                    { id: 'QC1', moves: 34, max: 40 },
+                    { id: 'QC2', moves: 30, max: 40 },
+                    { id: 'QC3', moves: 28, max: 40 }
+                ],
+                teus: 1456
+            }
+        };
+
+        // Time range affects KPI trends
+        const timeRangeMultipliers = {
+            'Last 24h': { vtt: 18.3, crane: 28.4, yard: 3.2, truck: 38, cost: 142, co2: 12.3 },
+            'Last 7 days': { vtt: 19.1, crane: 27.8, yard: 3.5, truck: 41, cost: 145, co2: 12.8 },
+            'Last 30 days': { vtt: 20.5, crane: 26.2, yard: 4.1, truck: 45, cost: 150, co2: 13.5 }
+        };
+        
+        const Dashboard = () => {
+            const [terminal, setTerminal] = useState('Terminal A');
+            const [berth, setBerth] = useState('All Berths');
+            const [timeRange, setTimeRange] = useState('Last 24h');
+            const [operationType, setOperationType] = useState('All Operations');
+            const [role, setRole] = useState('manager');
+            
+            // Get filtered data based on selections
+            const getFilteredVessels = () => {
+                let vessels = terminalData[terminal].vessels;
+                
+                // Filter by berth
+                if (berth !== 'All Berths') {
+                    vessels = vessels.filter(v => v.berth === berth);
+                }
+                
+                // Filter by operation type
+                if (operationType !== 'All Operations') {
+                    vessels = vessels.filter(v => v.type === operationType);
+                }
+                
+                return vessels;
+            };
+
+            const getFilteredCranes = () => {
+                return terminalData[terminal].cranes;
+            };
+
+            const getCurrentKPIs = () => {
+                const metrics = timeRangeMultipliers[timeRange];
+                return [
+                    { label: 'Vessel Turnaround Time', value: `${metrics.vtt}h`, trend: '↓ 2.1h', status: 'green' },
+                    { label: 'Crane Productivity', value: `${metrics.crane}`, trend: '↑ 1.2/h', status: 'green' },
+                    { label: 'Yard Dwell Time', value: `${metrics.yard}d`, trend: '↑ 0.3d', status: metrics.yard > 4 ? 'red' : metrics.yard > 3 ? 'amber' : 'green' },
+                    { label: 'Truck TAT', value: `${metrics.truck}m`, trend: '↓ 4m', status: metrics.truck > 45 ? 'red' : metrics.truck > 40 ? 'amber' : 'green' },
+                    { label: 'Cost per TEU', value: `$${metrics.cost}`, trend: '↑ $8', status: metrics.cost > 150 ? 'red' : metrics.cost > 140 ? 'amber' : 'green' },
+                    { label: 'CO₂ per TEU', value: `${metrics.co2}kg`, trend: '↓ 1.2kg', status: 'green' }
+                ];
+            };
+
+            const handleApprove = (id) => {
+                alert(`✓ Recommendation ${id} approved for ${terminal}!`);
+            };
+            
+            const handleDismiss = (id) => {
+                alert(`⊗ Recommendation ${id} dismissed.`);
+            };
+            
+            const handleSimulate = (id) => {
+                alert(`→ Launching simulation for Recommendation ${id} at ${terminal}...`);
+            };
+
+            const getFilteredKPIs = () => {
+                const kpis = getCurrentKPIs();
+                if (role === 'executive') {
+                    return kpis.filter(kpi => 
+                        kpi.label.includes('Cost') || 
+                        kpi.label.includes('CO₂') || 
+                        kpi.label.includes('Vessel Turnaround')
+                    );
+                } else if (role === 'supervisor') {
+                    return kpis.filter(kpi => 
+                        kpi.label.includes('Crane') || 
+                        kpi.label.includes('Truck') || 
+                        kpi.label.includes('Yard')
+                    );
+                }
+                return kpis;
+            };
+
+            const shouldShowSection = (sectionName) => {
+                if (role === 'executive') {
+                    return ['financial', 'sustainability', 'predictions'].includes(sectionName);
+                } else if (role === 'supervisor') {
+                    return ['vessels', 'cranes', 'yard', 'gate', 'labor'].includes(sectionName);
+                }
+                return true;
+            };
+
+            const getActiveFilters = () => {
+                const filters = [];
+                if (terminal !== 'Terminal A') filters.push(terminal);
+                if (berth !== 'All Berths') filters.push(berth);
+                if (timeRange !== 'Last 24h') filters.push(timeRange);
+                if (operationType !== 'All Operations') filters.push(operationType);
+                return filters;
+            };
+
+            const yardBlocks = [
+                { id: 'A', occupancy: 62, status: 'low' },
+                { id: 'B', occupancy: 78, status: 'medium' },
+                { id: 'C', occupancy: 94, status: 'high' },
+                { id: 'D', occupancy: 81, status: 'medium' },
+                { id: 'E', occupancy: 58, status: 'low' },
+                { id: 'F', occupancy: 73, status: 'medium' }
+            ];
+
+            const predictions = [
+                { type: 'warning', message: `Yard Block C at ${terminal}: 96% occupancy predicted by 16:00`, risk: 'High Risk' },
+                { type: 'warning', message: 'Vessel "MSC Aurora": 3.2h delay predicted', risk: 'Berth conflict' },
+                { type: 'info', message: 'Gate congestion: Peak at 14:30 (38 trucks expected)', risk: 'Moderate' }
+            ];
+
+            const recommendations = [
+                {
+                    id: 1,
+                    title: `Reassign RTG-4 from Block A → Block C (${terminal})`,
+                    impact: '-18% truck wait time, -12min avg TAT',
+                    confidence: '87%',
+                    cost: '$240',
+                    timeline: 'Immediate'
+                },
+                {
+                    id: 2,
+                    title: 'Expedite discharge of Vessel B (Containers 1200-1450)',
+                    impact: '+2.1h berth window for Vessel D (avoid $15K demurrage)',
+                    confidence: '78%',
+                    cost: '$1,200 OT',
+                    timeline: 'Next shift'
+                },
+                {
+                    id: 3,
+                    title: 'Activate Gate Appointment Slots 14:00-15:00',
+                    impact: 'Distribute 22 trucks, -15min avg queue time',
+                    confidence: '92%',
+                    cost: '$0',
+                    timeline: 'Immediate'
+                }
+            ];
+            
+            return (
+                <div className="dashboard-container">
+                    {/* Global Controls */}
+                    <div className="global-controls">
+                        <div className="logo">⚓ PORT CONTROL</div>
+                        <div className="controls-group">
+                            <select 
+                                className="control-select" 
+                                value={terminal} 
+                                onChange={(e) => {
+                                    setTerminal(e.target.value);
+                                    setBerth('All Berths'); // Reset berth when terminal changes
+                                }}
+                            >
+                                <option>Terminal A</option>
+                                <option>Terminal B</option>
+                                <option>Terminal C</option>
+                            </select>
+                            <select 
+                                className="control-select"
+                                value={berth}
+                                onChange={(e) => setBerth(e.target.value)}
+                            >
+                                <option>All Berths</option>
+                                {terminalData[terminal].vessels.map(v => v.berth).filter((b, i, arr) => arr.indexOf(b) === i).map(b => (
+                                    <option key={b}>{b}</option>
+                                ))}
+                            </select>
+                            <select 
+                                className="control-select" 
+                                value={timeRange} 
+                                onChange={(e) => setTimeRange(e.target.value)}
+                            >
+                                <option>Last 24h</option>
+                                <option>Last 7 days</option>
+                                <option>Last 30 days</option>
+                            </select>
+                            <select 
+                                className="control-select"
+                                value={operationType}
+                                onChange={(e) => setOperationType(e.target.value)}
+                            >
+                                <option>All Operations</option>
+                                <option>Import</option>
+                                <option>Export</option>
+                                <option>Transship</option>
+                            </select>
+                        </div>
+                        <div className="role-selector">
+                            <button 
+                                className={`role-btn ${role === 'executive' ? 'active' : ''}`}
+                                onClick={() => setRole('executive')}
+                            >
+                                Executive
+                            </button>
+                            <button 
+                                className={`role-btn ${role === 'manager' ? 'active' : ''}`}
+                                onClick={() => setRole('manager')}
+                            >
+                                Manager
+                            </button>
+                            <button 
+                                className={`role-btn ${role === 'supervisor' ? 'active' : ''}`}
+                                onClick={() => setRole('supervisor')}
+                            >
+                                Supervisor
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* Role Notification */}
+                    <div className="role-notification">
+                        <h3>
+                            {role === 'executive' && '👔 Executive View: Strategic Overview & Financial KPIs'}
+                            {role === 'manager' && '📊 Manager View: Full Operational Dashboard'}
+                            {role === 'supervisor' && '⚙️ Supervisor View: Real-Time Operations & Tactical Metrics'}
+                        </h3>
+                        <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem' }}>
+                            {role === 'executive' && 'Focus: Cost per TEU, Vessel Turnaround, Sustainability, Strategic Insights'}
+                            {role === 'manager' && 'Focus: All KPIs, Equipment Performance, AI Recommendations, Resource Allocation'}
+                            {role === 'supervisor' && 'Focus: Crane Productivity, Yard Operations, Gate Management, Labor Efficiency'}
+                        </p>
+                    </div>
+
+                    {/* Active Filters Notification */}
+                    {getActiveFilters().length > 0 && (
+                        <div className="filter-notification">
+                            <strong>🔍 Active Filters:</strong> {getActiveFilters().join(' • ')} 
+                            {getFilteredVessels().length === 0 && ' (No vessels match current filters)'}
+                        </div>
+                    )}
+                    
+                    {/* Executive Overview */}
+                    <div className="executive-overview">
+                        <div className="kpi-grid">
+                            {getFilteredKPIs().map((kpi, index) => (
+                                <div className="kpi-tile" key={index}>
+                                    <div className="kpi-label">{kpi.label}</div>
+                                    <div className="kpi-value">{kpi.value}</div>
+                                    <div className="kpi-trend">
+                                        <span className={`status-indicator status-${kpi.status}`}></span>
+                                        <span>{kpi.trend}</span>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                    
+                    {/* Main Dashboard Grid */}
+                    <div className="dashboard-grid">
+                        {/* Vessel & Berth Operations */}
+                        {shouldShowSection('vessels') && (
+                            <div className="dashboard-section">
+                                <div className="section-header">
+                                    <h2 className="section-title">Vessel & Berth Operations</h2>
+                                    <div className="section-kpis">
+                                        <div className="section-kpi">
+                                            <span className="section-kpi-label">Vessels</span>
+                                            <span className="section-kpi-value">{getFilteredVessels().length}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                {getFilteredVessels().length > 0 ? (
+                                    <>
+                                        <div className="berth-gantt">
+                                            {getFilteredVessels().map((vessel, index) => (
+                                                <div className="berth-row" key={index}>
+                                                    <div className="berth-label">{vessel.berth}</div>
+                                                    <div className="berth-timeline">
+                                                        <div 
+                                                            className="vessel-block" 
+                                                            style={{ left: vessel.start, width: vessel.width }}
+                                                            title={`${vessel.name} (${vessel.type})`}
+                                                        >
+                                                            {vessel.name}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                        
+                                        <h3 style={{ marginTop: '1.5rem', marginBottom: '1rem', fontSize: '0.875rem', color: 'var(--text-secondary)' }}>
+                                            Crane Moves per Hour
+                                        </h3>
+                                        <div className="crane-bar-chart">
+                                            {getFilteredCranes().map((crane, index) => (
+                                                <div className="crane-bar" key={index}>
+                                                    <div className="crane-bar-label">{crane.id}</div>
+                                                    <div className="crane-bar-track">
+                                                        <div 
+                                                            className="crane-bar-fill" 
+                                                            style={{ 
+                                                                width: `${(crane.moves / crane.max) * 100}%`,
+                                                                background: crane.status === 'Down' 
+                                                                    ? 'linear-gradient(90deg, var(--accent-danger), var(--red))' 
+                                                                    : 'linear-gradient(90deg, var(--accent-success), var(--accent-primary))'
+                                                            }}
+                                                        ></div>
+                                                    </div>
+                                                    <div className="crane-bar-value">
+                                                        {crane.status || crane.moves}
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </>
+                                ) : (
+                                    <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-secondary)' }}>
+                                        No vessels match the current filter criteria
+                                    </div>
+                                )}
+                            </div>
+                        )}
+                        
+                        {/* Crane & Equipment Performance */}
+                        {shouldShowSection('cranes') && (
+                            <div className="dashboard-section">
+                                <div className="section-header">
+                                    <h2 className="section-title">Crane Utilization</h2>
+                                    <div className="section-kpis">
+                                        <div className="section-kpi">
+                                            <span className="section-kpi-label">Equipment Util.</span>
+                                            <span className="section-kpi-value">82% 🟢</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div className="heatmap-grid">
+                                    {getFilteredCranes().map((crane, index) => (
+                                        <div 
+                                            className={`heatmap-cell ${
+                                                crane.moves >= 30 ? 'heatmap-low' : 
+                                                crane.moves >= 25 ? 'heatmap-medium' : 
+                                                'heatmap-high'
+                                            }`}
+                                            key={index}
+                                            title={`${crane.id}: ${crane.moves} moves/h`}
+                                        >
+                                            <div style={{ fontWeight: 700, fontSize: '1rem' }}>{crane.id}</div>
+                                            <div style={{ fontSize: '0.7rem', opacity: 0.8 }}>{crane.moves}m/h</div>
+                                        </div>
+                                    ))}
+                                </div>
+                                
+                                <div className="metric-grid">
+                                    <div className="metric-item">
+                                        <div className="section-kpi-label">Planned Maintenance</div>
+                                        <div style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--accent-primary)' }}>12%</div>
+                                    </div>
+                                    <div className="metric-item">
+                                        <div className="section-kpi-label">Unplanned Downtime</div>
+                                        <div style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--accent-danger)' }}>8%</div>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Yard Operations */}
+                        {shouldShowSection('yard') && (
+                            <div className="dashboard-section">
+                                <div className="section-header">
+                                    <h2 className="section-title">Yard Operations</h2>
+                                    <div className="section-kpis">
+                                        <div className="section-kpi">
+                                            <span className="section-kpi-label">TEUs Today</span>
+                                            <span className="section-kpi-value">{terminalData[terminal].teus}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <h3 style={{ marginBottom: '1rem', fontSize: '0.875rem', color: 'var(--text-secondary)' }}>
+                                    Real-Time Yard Occupancy
+                                </h3>
+                                <div className="heatmap-grid">
+                                    {yardBlocks.map((block, index) => (
+                                        <div 
+                                            className={`heatmap-cell heatmap-${block.status}`}
+                                            key={index}
+                                            title={`Block ${block.id}: ${block.occupancy}% occupied`}
+                                        >
+                                            <div style={{ fontWeight: 700, fontSize: '1.25rem' }}>
+                                                {block.id}
+                                            </div>
+                                            <div style={{ fontSize: '0.9rem' }}>
+                                                {block.occupancy}%
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Gate Operations */}
+                        {shouldShowSection('gate') && (
+                            <div className="dashboard-section">
+                                <div className="section-header">
+                                    <h2 className="section-title">Gate Operations</h2>
+                                    <div className="section-kpis">
+                                        <div className="section-kpi">
+                                            <span className="section-kpi-label">Avg TAT</span>
+                                            <span className="section-kpi-value">38m 🟢</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div className="gauge-container">
+                                    <svg className="gauge-svg" width="200" height="200" viewBox="0 0 200 200">
+                                        <circle 
+                                            cx="100" 
+                                            cy="100" 
+                                            r="80" 
+                                            fill="none" 
+                                            stroke="var(--bg-tertiary)" 
+                                            strokeWidth="20"
+                                        />
+                                        <circle 
+                                            cx="100" 
+                                            cy="100" 
+                                            r="80" 
+                                            fill="none" 
+                                            stroke="url(#gradient)" 
+                                            strokeWidth="20"
+                                            strokeDasharray={`${(38 / 60) * 502} 502`}
+                                            strokeLinecap="round"
+                                        />
+                                        <defs>
+                                            <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                                                <stop offset="0%" stopColor="var(--accent-success)" />
+                                                <stop offset="100%" stopColor="var(--accent-primary)" />
+                                            </linearGradient>
+                                        </defs>
+                                    </svg>
+                                    <div className="gauge-value">
+                                        <div className="gauge-number">38</div>
+                                        <div className="gauge-label">minutes</div>
+                                    </div>
+                                </div>
+                                
+                                <div className="metric-grid">
+                                    <div className="metric-item">
+                                        <div className="section-kpi-label">In-Gate Queue</div>
+                                        <div style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--accent-primary)' }}>
+                                            12 trucks
+                                        </div>
+                                    </div>
+                                    <div className="metric-item">
+                                        <div className="section-kpi-label">Out-Gate Queue</div>
+                                        <div style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--accent-primary)' }}>
+                                            8 trucks
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Financial Overview - Executives Only */}
+                        {shouldShowSection('financial') && role === 'executive' && (
+                            <div className="dashboard-section full-width">
+                                <div className="section-header">
+                                    <h2 className="section-title">Financial Performance - {terminal}</h2>
+                                </div>
+                                <div className="metric-grid">
+                                    <div className="metric-item">
+                                        <div className="section-kpi-label">Revenue per TEU</div>
+                                        <div style={{ fontSize: '2rem', fontWeight: 700, color: 'var(--accent-success)' }}>$385</div>
+                                    </div>
+                                    <div className="metric-item">
+                                        <div className="section-kpi-label">EBITDA Margin</div>
+                                        <div style={{ fontSize: '2rem', fontWeight: 700, color: 'var(--accent-success)' }}>42%</div>
+                                    </div>
+                                    <div className="metric-item">
+                                        <div className="section-kpi-label">Monthly Throughput</div>
+                                        <div style={{ fontSize: '2rem', fontWeight: 700, color: 'var(--accent-primary)' }}>{terminalData[terminal].teus * 30}</div>
+                                        <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>TEUs</div>
+                                    </div>
+                                    <div className="metric-item">
+                                        <div className="section-kpi-label">Customer Satisfaction</div>
+                                        <div style={{ fontSize: '2rem', fontWeight: 700, color: 'var(--accent-success)' }}>94%</div>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Sustainability */}
+                        {shouldShowSection('sustainability') && (
+                            <div className="dashboard-section full-width">
+                                <div className="section-header">
+                                    <h2 className="section-title">Sustainability & ESG</h2>
+                                </div>
+                                <div className="metric-grid">
+                                    <div className="metric-item">
+                                        <div className="section-kpi-label">CO₂ per TEU</div>
+                                        <div style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--accent-success)' }}>
+                                            {timeRangeMultipliers[timeRange].co2} kg
+                                        </div>
+                                    </div>
+                                    <div className="metric-item">
+                                        <div className="section-kpi-label">Electric Equipment %</div>
+                                        <div style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--accent-warning)' }}>67%</div>
+                                    </div>
+                                    <div className="metric-item">
+                                        <div className="section-kpi-label">YTD Emission Reduction</div>
+                                        <div style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--accent-success)' }}>9%</div>
+                                    </div>
+                                    <div className="metric-item">
+                                        <div className="section-kpi-label">Energy per TEU</div>
+                                        <div style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--accent-primary)' }}>38 kWh</div>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+                        
+                        {/* AI Insights Panel */}
+                        {shouldShowSection('predictions') && (
+                            <div className="ai-insights">
+                                <div className="ai-header">
+                                    <div className="ai-icon">🤖</div>
+                                    <div>
+                                        <h2 className="ai-title">AI-Powered Insights</h2>
+                                        <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem' }}>
+                                            Predictive analytics for {terminal} ({timeRange})
+                                        </p>
+                                    </div>
+                                </div>
+                                
+                                <h3 style={{ fontSize: '1rem', marginBottom: '1rem', color: 'var(--accent-warning)', fontWeight: 700 }}>
+                                    🔮 PREDICTIONS (Next 6 Hours)
+                                </h3>
+                                {predictions.map((prediction, index) => (
+                                    <div className="prediction-card" key={index}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                                            <span style={{ fontSize: '1.25rem' }}>
+                                                {prediction.type === 'warning' ? '⚠️' : 'ℹ️'}
+                                            </span>
+                                            <strong style={{ color: 'var(--accent-primary)' }}>{prediction.message}</strong>
+                                        </div>
+                                        <div style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>
+                                            Risk Level: <span style={{ color: 'var(--accent-warning)' }}>{prediction.risk}</span>
+                                        </div>
+                                    </div>
+                                ))}
+                                
+                                {role === 'manager' && (
+                                    <>
+                                        <h3 style={{ fontSize: '1rem', marginTop: '2rem', marginBottom: '1rem', color: 'var(--accent-primary)', fontWeight: 700 }}>
+                                            💡 RECOMMENDED ACTIONS
+                                        </h3>
+                                        {recommendations.map((rec) => (
+                                            <div className="recommendation-card" key={rec.id}>
+                                                <h4 style={{ fontSize: '1rem', marginBottom: '0.75rem', color: 'var(--text-primary)' }}>
+                                                    {rec.id}️⃣ {rec.title}
+                                                </h4>
+                                                <div style={{ fontSize: '0.875rem', marginBottom: '0.5rem' }}>
+                                                    <strong>Impact:</strong> {rec.impact}
+                                                </div>
+                                                <div className="recommendation-actions">
+                                                    <button className="btn btn-approve" onClick={() => handleApprove(rec.id)}>
+                                                        ✓ Approve
+                                                    </button>
+                                                    <button className="btn btn-dismiss" onClick={() => handleDismiss(rec.id)}>
+                                                        ⊗ Dismiss
+                                                    </button>
+                                                    <button className="btn btn-simulate" onClick={() => handleSimulate(rec.id)}>
+                                                        → Simulate
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </>
+                                )}
+
+                                {role === 'executive' && (
+                                    <p style={{ marginTop: '1rem', padding: '1rem', background: 'var(--bg-tertiary)', borderRadius: '8px', fontSize: '0.875rem' }}>
+                                        💼 <strong>Executive Note:</strong> Detailed recommendations available to Operations Managers.
+                                    </p>
+                                )}
+
+                                {role === 'supervisor' && (
+                                    <p style={{ marginTop: '1rem', padding: '1rem', background: 'var(--bg-tertiary)', borderRadius: '8px', fontSize: '0.875rem' }}>
+                                        ⚙️ <strong>Supervisor Note:</strong> Contact your Operations Manager to implement these recommendations.
+                                    </p>
+                                )}
+                            </div>
+                        )}
+                    </div>
+                </div>
+            );
+        };
+        
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<Dashboard />);
+    </script>
+</body>
+</html>
